@@ -6,11 +6,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.graph_objs as go
 from plotly.offline import iplot
-from matplotlib import rc
-rc('font', family='AppleGothic')
 import warnings
 warnings.filterwarnings('ignore')
-
+from sklearn.preprocessing import MinMaxScaler
 
 data = pd.read_csv("train.csv", encoding="utf-8")
 print(data.columns)
@@ -18,19 +16,64 @@ print(data.columns)
 # 데이터 정보 확인
 data.info()
 #%%
+# 각 Store에 대한 Weekly Sales를 시계열 그래프라고 생각하고 각 Store에 대한 Weekly Sales의 코사인 유사도를 구한 뒤에 Store끼리의 유사성을 파악
+# Think of Weekly Sales for each store as a time series graph, obtain the cosine similarity of Weekly Sales for each store, and then identify the similarity between stores
+def cos_similarity(v1, v2):
+    dot_product = np.dot(v1, v2)
+    l2_norm = (np.sqrt(sum(np.square(v1))) * np.sqrt(sum(np.square(v2))))
+    similarity = dot_product / l2_norm     
+    similarity = round(similarity, 3)
+    return similarity
+
+for num1 in range(1,46):
+    print("\n{} Store\n".format(num1))
+    scaler1 = MinMaxScaler()
+    time_series1 = data[data.Store==num1]['Weekly_Sales'].values.reshape(-1, 1)
+    scaled_time_series1 = scaler.fit_transform(time_series1)
+    for num2 in range(num1+1, 46) :
+        time_series2 =data[data.Store==num2]['Weekly_Sales'].values.reshape(-1,1)
+        scaler2 = MinMaxScaler()
+        scaled_time_series2 = scaler.fit_transform(time_series2)
+        print("{} Store와 {} Store의 코사인 유사도는 {}".format(num1, num2, cos_similarity(scaled_time_series1.reshape(-1), scaled_time_series2.reshape(-1))))
+        
+
+
+#%%
+# Analyze Correlation by Store
+corr = []
+for num in range(1,46):
+    co = data[data.Store==num]
+    co = co.reset_index()
+    num_corr = co.corr()['Weekly_Sales']
+    num_corr = num_corr.drop(['index', 'id','Store','Weekly_Sales'])
+    corr.append(num_corr)
+corr_df = pd.concat(corr, axis=1).T
+corr_df.index = list(range(1,46))
+
+f, ax = plt.subplots(figsize=(20,8))
+plt.title("Correlation between point-to-point sales and variables before PROMOTION pre-processing", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax)
+plt.xlabel('Store')
+plt.show()
+#%%
 
 # 결측치 확인
+print("Before Preprocessing\n")
 print(data.isna().sum())
 
 # 결측치 
-for i in range (1, 46):
-    data.loc[139*(i-1):91+(139*(i-1)), ['Promotion1', 'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5']] = 0
-    
+#for i in range (1, 46):
+#    data.loc[139*(i-1):91+(139*(i-1)), ['Promotion1', 'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5']] = 0
+
+
+# If the value of Promotions is NAN, assume that Promotions did not proceed and replace it with 0
+print("After Preprocessing (fill NAN to 0)\n")
+data = data.fillna(0)
 print(data.isna().sum())
 
 
-data = data.interpolate(method='values')
-print(data.isna().sum())
+#data = data.interpolate(method='values')
+#print(data.isna().sum())
 
 # Promotion 열에 꽤 많은 Nan 값이 있음 그래서 Promotion이 NAN 값인 값들을 다 삭제하기에는 너무 데이터가 줄어드는 문제가 발생
 #%%
@@ -100,10 +143,12 @@ data.loc[(data['Date'] != '2010-12-31')&(data['Date'] != '2011-12-30'),'Christma
 
 
 sns.barplot(x='Super_Bowl', y='Weekly_Sales', data=data) # Super bowl holiday vs not-super bowl
+#%%
 sns.barplot(x='Labor_Day', y='Weekly_Sales', data=data) # Labor day holiday vs not-labor day
+#%%
 sns.barplot(x='Thanksgiving', y='Weekly_Sales', data=data) # Thanksgiving holiday vs not-thanksgiving
+#%%
 sns.barplot(x='Christmas', y='Weekly_Sales', data=data) # Christmas holiday vs not-Christmas
-
 #%%
 
 x = data['Store']
@@ -123,7 +168,7 @@ data['Date'] = pd.to_datetime(data["Date"])
 data['week'] =data['Date'].dt.week
 data['month'] =data['Date'].dt.month 
 data['year'] =data['Date'].dt.year
-
+data['WeekOfYear'] = (data.Date.dt.isocalendar().week)*1.0 
 # Group by year
 data.groupby('year')['Weekly_Sales'].mean()
 # Group by month
@@ -168,7 +213,7 @@ corr_df = pd.concat(corr, axis=1).T
 corr_df.index = list(range(1,46))
 
 f, ax = plt.subplots(figsize=(20,8))
-plt.title("지점별 매출액과 변수들간의 상관관계", fontsize=15)
+plt.title("Correlation between point-to-point sales and variables After PROMOTION pre-processing", fontsize=15)
 sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax)
 plt.xlabel('지점(Store)')
 plt.show()
@@ -195,6 +240,13 @@ plt.title("지점별 매출액과 변수들간의 상관관계", fontsize=15)
 sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax)
 plt.xlabel('지점(Store)')
 plt.show()
+#%%
+plt.figure(figsize=(28,14))
+plt.xticks( fontsize=20)
+plt.yticks( fontsize=20)
+
+sns.heatmap(data.corr(), cmap='Reds', annot=True, annot_kws={'size':12})
+plt.title('Correlation Matrix', fontsize=30)
 #%% 
 data.set_index('Date', inplace=True) #seting date as index
 
@@ -211,7 +263,7 @@ data_week['Weekly_Sales'].plot()
 plt.title('Average Sales - Weekly')
 plt.show()
 #%%
-print(data_week.columns)
-train_set = data_week[['Fuel_Price', 'Promotion3', 'Promotion5', 'Thanksgiving', 'Weekly_Sales']]
+
+train_set = data[['Store', 'year','Thanksgiving', 'WeekOfYear', 'Weekly_Sales']]
 
 train_set.to_csv('train_set.csv', index=False) #csv파일로 생성
