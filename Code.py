@@ -16,6 +16,46 @@ print(data.columns)
 # 데이터 정보 확인
 data.info()
 #%%
+from matplotlib import dates
+
+fig = plt.figure(figsize=(50,50)) ## 캔버스 생성
+fig.set_facecolor('white') ## 캔버스 색상 설정
+
+for i in range(1,46):
+    train2 = data[data.Store == i]
+
+    train2  = train2[["Date", "Weekly_Sales"]]
+    
+    ax = fig.add_subplot(10,10,i) ## 그림 뼈대(프레임) 생성
+
+
+    plt.title("store_{}".format(i)) 
+    plt.ylabel('Weekly_Sales')
+    plt.xticks(rotation=15)
+    ax.xaxis.set_major_locator(dates.MonthLocator(interval = 2))
+    ax.plot(train2["Date"], train2["Weekly_Sales"],marker='',label='train', color="blue")
+
+plt.show()
+#%%
+# Date format is not comportable to me. So i change the format : day/month/year -> year-month-day
+date_df = data.loc[:, ['Date']]
+
+
+for i in range(len(date_df)) :
+    date_list =  date_df.loc[i].str.split('/')
+    date_df.loc[i] = date_list[0][2] + '-' + date_list[0][1] + '-' + date_list[0][0]
+
+data['Date'] = date_df
+
+# Change type of 'Date' : object to datedime
+data['Date'] = pd.to_datetime(data["Date"])
+data['week'] =data['Date'].dt.week
+data['month'] =data['Date'].dt.month 
+data['year'] =data['Date'].dt.year
+data['WeekOfYear'] = (data.Date.dt.isocalendar().week)*1.0 
+data['day'] = data['Date'].dt.day
+#%%
+'''
 # 각 Store에 대한 Weekly Sales를 시계열 그래프라고 생각하고 각 Store에 대한 Weekly Sales의 코사인 유사도를 구한 뒤에 Store끼리의 유사성을 파악
 # Think of Weekly Sales for each store as a time series graph, obtain the cosine similarity of Weekly Sales for each store, and then identify the similarity between stores
 def cos_similarity(v1, v2):
@@ -29,15 +69,58 @@ for num1 in range(1,46):
     print("\n{} Store\n".format(num1))
     scaler1 = MinMaxScaler()
     time_series1 = data[data.Store==num1]['Weekly_Sales'].values.reshape(-1, 1)
-    scaled_time_series1 = scaler.fit_transform(time_series1)
+    scaled_time_series1 = scaler1.fit_transform(time_series1)
     for num2 in range(num1+1, 46) :
         time_series2 =data[data.Store==num2]['Weekly_Sales'].values.reshape(-1,1)
         scaler2 = MinMaxScaler()
-        scaled_time_series2 = scaler.fit_transform(time_series2)
+        scaled_time_series2 = scaler2.fit_transform(time_series2)
         print("{} Store와 {} Store의 코사인 유사도는 {}".format(num1, num2, cos_similarity(scaled_time_series1.reshape(-1), scaled_time_series2.reshape(-1))))
-        
+'''
+#%% 
+# 시계열 데이터 군집 분석
+from tslearn.clustering import TimeSeriesKMeans
 
+scaled_time_series_df = pd.DataFrame()
+for num in range(1, 46) :
+    col_name = "Store " +str(num)
+    scaler = MinMaxScaler()
+    time_series = data[(data.Store==num) & (data.month <= 10)]['Weekly_Sales'].values.reshape(-1, 1)
+    scaled_time_series = scaler.fit_transform(time_series) 
+    scaled_time_series = pd.DataFrame(scaled_time_series)
+    scaled_time_series_df[col_name] = scaled_time_series
 
+transpose_scaled_time_series_df = scaled_time_series_df.transpose()
+    
+km = TimeSeriesKMeans(n_clusters=2, 
+                      metric="dtw", 
+                      max_iter=5,
+                      random_state=2022)
+
+prediction = km.fit_predict(transpose_scaled_time_series_df)
+
+list_0 = []
+list_1 = []
+#list_2 = []
+
+for i in range(len(prediction)) :
+    if prediction[i] == 0 :
+        list_0.append(i+1)
+    elif prediction[i] == 1 :
+        list_1.append(i+1)
+    #else:
+        #list_2.append(i+1)
+
+print("Clustering 0 : ", list_0)
+print("Clustering 1 : ", list_1)
+#print("Clustering 2 : ", list_2)
+
+for i in range(len(prediction)) :
+    if prediction[i] == 0 :
+        data.loc[(data.Store== i + 1), 'Type'] = 0
+    elif prediction[i] == 1 :
+        data.loc[(data.Store== i + 1), 'Type'] = 1
+    #else:
+        #data.loc[(data.Store== i + 1), 'Type'] = 2
 #%%
 # Analyze Correlation by Store
 corr = []
@@ -76,39 +159,7 @@ print(data.isna().sum())
 #print(data.isna().sum())
 
 # Promotion 열에 꽤 많은 Nan 값이 있음 그래서 Promotion이 NAN 값인 값들을 다 삭제하기에는 너무 데이터가 줄어드는 문제가 발생
-#%%
-from matplotlib import dates
 
-fig = plt.figure(figsize=(50,50)) ## 캔버스 생성
-fig.set_facecolor('white') ## 캔버스 색상 설정
-
-for i in range(1,46):
-    train2 = data[data.Store == i]
-
-    train2  = train2[["Date", "Weekly_Sales"]]
-    
-    ax = fig.add_subplot(10,10,i) ## 그림 뼈대(프레임) 생성
-
-
-    plt.title("store_{}".format(i)) 
-    plt.ylabel('Weekly_Sales')
-    plt.xticks(rotation=15)
-    ax.xaxis.set_major_locator(dates.MonthLocator(interval = 2))
-    ax.plot(train2["Date"], train2["Weekly_Sales"],marker='',label='train', color="blue")
-
-plt.show()
-#%%
-# Date format is not comportable to me. So i change the format : day/month/year -> year-month-day
-date_df = data.loc[:, ['Date']]
-
-
-for i in range(len(date_df)) :
-    date_list =  date_df.loc[i].str.split('/')
-    date_df.loc[i] = date_list[0][2] + '-' + date_list[0][1] + '-' + date_list[0][0]
-
-data['Date'] = date_df
-
-data.info()
 
 # %%
 # IsHoliday Column Analysis => IsHoliday column is object so it need to change into int 
@@ -163,12 +214,7 @@ plt.show()
 plt.figure(figsize=(30,10))
 fig = sns.barplot(x='Store', y='Weekly_Sales', data=data)
 #%%
-# Change type of 'Date' : object to datedime
-data['Date'] = pd.to_datetime(data["Date"])
-data['week'] =data['Date'].dt.week
-data['month'] =data['Date'].dt.month 
-data['year'] =data['Date'].dt.year
-data['WeekOfYear'] = (data.Date.dt.isocalendar().week)*1.0 
+
 # Group by year
 data.groupby('year')['Weekly_Sales'].mean()
 # Group by month
@@ -199,7 +245,27 @@ fuel_price.plot()
 
 unemployment = pd.pivot_table(data, values = "Weekly_Sales", index= "Unemployment")
 unemployment.plot()
+#%%
+# 지점별 매출액 차이
+# Differences in sales by Store
 
+fig = plt.figure(figsize=(30,60))
+
+for store in range(1,max(data.Store)+1):
+    store_set = data[data.Store==store]
+    store_set_2010 = store_set[store_set.year==2010]
+    store_set_2011 = store_set[store_set.year==2011]
+    store_set_2012 = store_set[store_set.year==2012]
+    
+    ax = fig.add_subplot(12, 4, store)
+    
+    plt.title(f"store_{store}")
+    ax.plot(store_set_2010.week, store_set_2010.Weekly_Sales, label="2010", alpha=0.3)
+    ax.plot(store_set_2011.week, store_set_2011.Weekly_Sales, label="2011", alpha=0.3)
+    ax.plot(store_set_2012.week, store_set_2012.Weekly_Sales, label="2012", color='r')
+    ax.legend()
+    
+plt.show()
 #%%
 # Analyze Correlation by Store
 corr = []
@@ -224,10 +290,11 @@ data['Labor_Day'] = data['Labor_Day'].astype(bool).astype(int) # changing T,F to
 data['Christmas'] = data['Christmas'].astype(bool).astype(int) # changing T,F to 0-1
 data['IsHoliday'] = data['IsHoliday'].astype(bool).astype(int) # changing T,F to 0-1
 #%%
+'''
 # 전처리 이후 상관관계 분석
 corr = []
 for num in range(1,46):
-    co = data[data.Store==num]
+    co = data[(data.Store==num) & (data.WeekOfYear<=43)]
     co = co.reset_index()
     num_corr = co.corr()['Weekly_Sales']
     num_corr = num_corr.drop(['index', 'id','Store','Weekly_Sales'])
@@ -235,18 +302,19 @@ for num in range(1,46):
 corr_df = pd.concat(corr, axis=1).T
 corr_df.index = list(range(1,46))
 
-f, ax = plt.subplots(figsize=(20,8))
-plt.title("지점별 매출액과 변수들간의 상관관계", fontsize=15)
-sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax)
-plt.xlabel('지점(Store)')
+f, ax = plt.subplots(figsize=(40,15))
+plt.title("Correlation after all pre-processing Before October", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax, annot=True)
+plt.xlabel('Store')
 plt.show()
+'''
 #%%
 plt.figure(figsize=(28,14))
 plt.xticks( fontsize=20)
 plt.yticks( fontsize=20)
-
+temp = data[data.year==2012]
 sns.heatmap(data.corr(), cmap='Reds', annot=True, annot_kws={'size':12})
-plt.title('Correlation Matrix', fontsize=30)
+plt.title('Correlation Matrix only 2012', fontsize=30)
 #%% 
 data.set_index('Date', inplace=True) #seting date as index
 
@@ -263,7 +331,120 @@ data_week['Weekly_Sales'].plot()
 plt.title('Average Sales - Weekly')
 plt.show()
 #%%
+# 2010년 데이터의 10월 이전까지
+# Analyze Correlation by Store
+corr = []
+for num in range(1,46):
+    co = data[(data.Store==num) & (data.year==2010) & (data.month <= 10)]
+    co = co.reset_index()
+    num_corr = co.corr()['Weekly_Sales']
+    num_corr = num_corr.drop(['id','Store','Weekly_Sales'])
+    corr.append(num_corr)
+corr_df = pd.concat(corr, axis=1).T
+corr_df.index = list(range(1,46))
 
-train_set = data[['Store', 'year','Thanksgiving', 'WeekOfYear', 'Weekly_Sales']]
+f, ax = plt.subplots(figsize=(40, 15))
+plt.title("Correlation 2010 Before October", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax, annot=True)
+plt.xlabel('Store')
+plt.show()
+#%%
+# 2011년 데이터의 10월 이전까지
+# Analyze Correlation by Store
+corr = []
+for num in range(1,46):
+    co = data[(data.Store==num) & (data.year==2011) & (data.month <= 10)]
+    co = co.reset_index()
+    num_corr = co.corr()['Weekly_Sales']
+    num_corr = num_corr.drop(['id','Store','Weekly_Sales'])
+    corr.append(num_corr)
+corr_df = pd.concat(corr, axis=1).T
+corr_df.index = list(range(1,46))
 
-train_set.to_csv('train_set.csv', index=False) #csv파일로 생성
+f, ax = plt.subplots(figsize=(40,15))
+plt.title("Correlation 2011 Before October", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax, annot=True)
+plt.xlabel('Store')
+plt.show()
+#%%
+# 2010년 데이터의 10월 이전까지
+# Analyze Correlation by Store
+corr = []
+for num in range(1,46):
+    co = data[(data.Store==num) & (data.month <= 10)]
+    co = co.reset_index()
+    num_corr = co.corr()['Weekly_Sales']
+    num_corr = num_corr.drop(['id','Store','Weekly_Sales'])
+    corr.append(num_corr)
+corr_df = pd.concat(corr, axis=1).T
+corr_df.index = list(range(1,46))
+
+f, ax = plt.subplots(figsize=(40,15))
+plt.title("Correlation all year before October", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax, annot=True)
+plt.xlabel('Store')
+plt.show()
+
+#%%
+# 2010년 10월만 분석
+# Analyze Correlation by Store
+corr = []
+for num in range(1,46):
+    co = data[(data.Store==num) & (data.year==2010) & (data.month == 10)]
+    co = co.reset_index()
+    num_corr = co.corr()['Weekly_Sales']
+    num_corr = num_corr.drop(['id','Store','Weekly_Sales'])
+    corr.append(num_corr)
+corr_df = pd.concat(corr, axis=1).T
+corr_df.index = list(range(1,46))
+
+f, ax = plt.subplots(figsize=(40,15))
+plt.title("Correlation Only 2010 October", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax, annot=True)
+plt.xlabel('Store')
+plt.show()
+#%%
+# 2011년 10월만 분석
+# Analyze Correlation by Store
+corr = []
+for num in range(1,46):
+    co = data[(data.Store==num) & (data.year==2011) & (data.month == 10)]
+    co = co.reset_index()
+    num_corr = co.corr()['Weekly_Sales']
+    num_corr = num_corr.drop(['id','Store','Weekly_Sales'])
+    corr.append(num_corr)
+corr_df = pd.concat(corr, axis=1).T
+corr_df.index = list(range(1,46))
+
+f, ax = plt.subplots(figsize=(40,15))
+plt.title("Correlation Only 2011 October", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax, annot=True)
+plt.xlabel('Store')
+plt.show()
+#%%
+# 2012년만 분석
+# Analyze Correlation by Store
+corr = []
+for num in range(1,46):
+    co = data[(data.Store==num) & (data.year==2012)]
+    co = co.reset_index()
+    num_corr = co.corr()['Weekly_Sales']
+    num_corr = num_corr.drop(['id','Store','Weekly_Sales'])
+    corr.append(num_corr)
+corr_df = pd.concat(corr, axis=1).T
+corr_df.index = list(range(1,46))
+
+f, ax = plt.subplots(figsize=(40,15))
+plt.title("Correlation Only 2012", fontsize=15)
+sns.heatmap(corr_df.T, cmap=sns.diverging_palette(240,10,as_cmap=True), ax=ax, annot=True)
+plt.xlabel('Store')
+plt.show()
+#%%
+#data = data.drop(['month', 'week'], axis=1)
+data.to_csv("minmax_train_set.csv", index = False)
+train_set = data[['Store', 'year','IsHoliday', 'Promotion3', 'WeekOfYear', 'Weekly_Sales']]
+
+# no min max
+# train_set.to_csv("minmax_train_set.csv", index = False)
+
+# train_set.to_csv('train_set.csv', index=False) #csv파일로 생성

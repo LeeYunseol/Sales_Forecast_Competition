@@ -30,6 +30,7 @@ scaler_for_weekly_sales.fit(original_train_df['Weekly_Sales'].values.reshape(-1,
 
 models = []
 
+
 features = ['Store', 'year','Thanksgiving', 'Promotion3','WeekOfYear']
 
 # 사용 모델 : Xgboost
