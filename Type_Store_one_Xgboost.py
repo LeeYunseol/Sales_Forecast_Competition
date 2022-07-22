@@ -16,9 +16,9 @@ from sklearn.linear_model import Lasso
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import ExtraTreesRegressor
-from xgboost import XGBRegressor
 from sklearn import metrics, ensemble, linear_model
 from sklearn.ensemble import HistGradientBoostingRegressor
+from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
 from matplotlib import pyplot
 import warnings
@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 train_df = pd.read_csv('C:/Users/hyunj/.spyder-py3/Dacon/dataset/dataset/train_data/minmax_train_set.csv')
 test_df = pd.read_csv('C:/Users/hyunj/.spyder-py3/Dacon/dataset/dataset/prepossed_test_data/minmax_test_set.csv')
 
-
+# 여기는 2010년 9월까지, 2011년 9월까지, 2012년 8월까지 학습한 뒤에 2012년 9월을 예측해서 모델 성능을 테스트
 practice_features = ['Store', 'Type', 'IsHoliday', 'year', 'WeekOfYear', 'day', 'month']
 #practice_features = ['Store', 'Type', 'IsHoliday', 'year', 'WeekOfYear', 'month', 'day', 'Promotion1',
 #             'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5']
@@ -38,8 +38,24 @@ practice_train = pd.concat([temp1, temp2, temp3])
 
 practice_test = train_df[(train_df.year==2012) & (train_df.month == 9)]
 
-model = XGBRegressor(colsample_bytree=0.8, max_depth= 5, learning_rate= 0.25, n_estimators=500,
-                   random_state =2022, nthread = -1, n_jobs=-1)
+# 그리드 서치를 통해서 성능을 높여보자!!
+parameters = {
+              'objective':['reg:linear'],
+              'learning_rate': [0.03, 0.05, 0.1], #so called `eta` value
+              'max_depth': [3, 5, 7],
+              'min_child_weight': [4, 6],
+              'subsample': [0.7, 0.8],
+              'colsample_bytree': [0.7, 0.8],
+              'n_estimators': [300, 500, 700, 1000]}
+
+fit_params={"early_stopping_rounds": 50, 
+            "eval_metric" : "rmse", 
+            "eval_set" : [[practice_test[practice_features], practice_test.Weekly_Sales]]}
+
+
+
+model = xgb.XGBRegressor(colsample_bytree=0.7, max_depth= 5, learning_rate= 0.2, n_estimators=1500,
+                   random_state =2022, min_child_weight = 4, nthread = -1, n_jobs=-1)
 
 model.fit(practice_train[practice_features], practice_train.Weekly_Sales,
           eval_set=[(practice_train[practice_features], practice_train.Weekly_Sales), (practice_test[practice_features], practice_test.Weekly_Sales)],
@@ -53,6 +69,7 @@ score = r2_score(practice_test.Weekly_Sales, prac_y_pred)
 print("R2 : {}".format(score))
 print("RMSE : {}".format(RMSE))
 
+'''
 # evaluate predictions
 # retrieve performance metrics
 results = model.evals_result()
@@ -76,15 +93,46 @@ for store in range(1, 46) :
     r2 = r2_score(pred, store_test.Weekly_Sales)
     print("Store {}".format(store))
     print("RMSE : {}    R2 : {}\n".format(rmse, r2))
-'''
+
 #%%
 
 # 꼭 있어야하는 정보 
-features = ['Store', 'Type', 'IsHoliday', 'year', 'WeekOfYear', 'month', 'day']
-
+features = ['Store', 'Type', 'year', 'WeekOfYear', 'month']
+#features = ['Store', 'Type', 'IsHoliday', 'year', 'WeekOfYear', 'month', 'day', 'Promotion1',
+#             'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5', 'Fuel_Price']
 
 train = train_df[(train_df.month<=10)]
 
+# 그리드 서치를 통해서 성능을 높여보자!!
+parameters = {
+              'objective':['reg:squarederror'],
+              'learning_rate': [0.1], #so called `eta` value
+              'max_depth': [5],
+              'min_child_weight': [4],
+              'subsample': [0.8],
+              'colsample_bytree': [0.8],
+              'n_estimators': [545]} #540??
+
+fit_params={
+            "early_stopping_rounds" :100,
+            "eval_metric" : "rmse", 
+            "eval_set" : [[train[features], train.Weekly_Sales]]}
+
+
+xgb = XGBRegressor(random_state = 2022)
+xgb_grid = GridSearchCV(xgb,
+                        parameters,
+                        cv = 10,
+                        n_jobs = 5,
+                        verbose=3)
+
+xgb_grid.fit(train[features], train.Weekly_Sales, **fit_params)
+best_model = xgb_grid.best_estimator_
+print("BEST SCORE : {}".format(xgb_grid.best_score_))
+print("BEST PARAMETER : {}".format(xgb_grid.best_params_))
+
+
+'''
 model = XGBRegressor(colsample_bytree=0.8, max_depth= 5, learning_rate= 0.25, n_estimators=500,
                    random_state =2022, nthread = -1, n_jobs=-1)
 
@@ -104,11 +152,13 @@ ax.plot(x_axis, results['validation_0']['rmse'], label='Train')
 ax.legend()
 pyplot.ylabel('Log Loss')
 pyplot.title('XGBoost Log Loss')
-pyplot.show()               
+pyplot.show() 
+'''              
 #%%
 # 학습 종료 후 test.csv 평가
 
-pred = model.predict(test_df[features])
+pred = xgb_grid.best_estimator_.predict(test_df[features])
+# pred = model.predict(test_df[features])
 
 test_df["Weekly_Sales"] = pred
 #%%
@@ -136,9 +186,8 @@ for store in range(1,46):
     
 plt.show()
 #%%
-sample_submission = pd.read_csv('sample_submission.csv')
+sample_submission = pd.read_csv('C:/Users/hyunj/.spyder-py3/Dacon/dataset/dataset/sample_submission.csv')
 sample_submission["Weekly_Sales"] = test_df.Weekly_Sales
-sample_submission.to_csv('submission.csv',index = False)
-sample_submission
+sample_submission.to_csv('C:/Users/hyunj/.spyder-py3/Dacon/dataset/dataset/submission.csv',index = False)
 
     
