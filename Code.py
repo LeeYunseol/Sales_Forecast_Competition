@@ -100,27 +100,27 @@ prediction = km.fit_predict(transpose_scaled_time_series_df)
 
 list_0 = []
 list_1 = []
-#list_2 = []
+list_2 = []
 
 for i in range(len(prediction)) :
     if prediction[i] == 0 :
         list_0.append(i+1)
     elif prediction[i] == 1 :
         list_1.append(i+1)
-    #else:
-        #list_2.append(i+1)
+    else:
+        list_2.append(i+1)
 
 print("Clustering 0 : ", list_0)
 print("Clustering 1 : ", list_1)
-#print("Clustering 2 : ", list_2)
+print("Clustering 2 : ", list_2)
 
 for i in range(len(prediction)) :
     if prediction[i] == 0 :
         data.loc[(data.Store== i + 1), 'Type'] = 0
     elif prediction[i] == 1 :
         data.loc[(data.Store== i + 1), 'Type'] = 1
-    #else:
-        #data.loc[(data.Store== i + 1), 'Type'] = 2
+    else:
+        data.loc[(data.Store== i + 1), 'Type'] = 2
 #%%
 # Analyze Correlation by Store
 corr = []

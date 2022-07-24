@@ -95,9 +95,13 @@ for store in range(1, 46) :
     print("RMSE : {}    R2 : {}\n".format(rmse, r2))
 
 #%%
+feature = list(train_df.columns)
+feature.remove('Weekly_Sales')
+feature.remove('week')
+#%%
 
 # 꼭 있어야하는 정보 
-features = ['Store', 'Type', 'year', 'WeekOfYear', 'month']
+features = ['Store', 'Type', 'year', 'WeekOfYear', 'Promotion1', 'Promotion5']
 #features = ['Store', 'Type', 'IsHoliday', 'year', 'WeekOfYear', 'month', 'day', 'Promotion1',
 #             'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5', 'Fuel_Price']
 
@@ -111,12 +115,12 @@ parameters = {
               'min_child_weight': [4],
               'subsample': [0.8],
               'colsample_bytree': [0.8],
-              'n_estimators': [545]} #540??
+              'n_estimators': [2000]} #540??
 
 fit_params={
-            "early_stopping_rounds" :100,
+            "early_stopping_rounds" :50,
             "eval_metric" : "rmse", 
-            "eval_set" : [[train[features], train.Weekly_Sales]]}
+            "eval_set" : [[train[feature], train.Weekly_Sales]]}
 
 
 xgb = XGBRegressor(random_state = 2022)
@@ -126,7 +130,7 @@ xgb_grid = GridSearchCV(xgb,
                         n_jobs = 5,
                         verbose=3)
 
-xgb_grid.fit(train[features], train.Weekly_Sales, **fit_params)
+xgb_grid.fit(train[feature], train.Weekly_Sales, **fit_params)
 best_model = xgb_grid.best_estimator_
 print("BEST SCORE : {}".format(xgb_grid.best_score_))
 print("BEST PARAMETER : {}".format(xgb_grid.best_params_))
@@ -154,12 +158,12 @@ pyplot.ylabel('Log Loss')
 pyplot.title('XGBoost Log Loss')
 pyplot.show() 
 '''              
-#%%
+ #%%
 # 학습 종료 후 test.csv 평가
-
-pred = xgb_grid.best_estimator_.predict(test_df[features])
+pred_before = xgb_grid.best_estimator_.predict(test_df[feature])
+pred = np.expm1(xgb_grid.best_estimator_.predict(test_df[feature]))
 # pred = model.predict(test_df[features])
-
+test_df["Before_Weekly_Sales"] = pred_before
 test_df["Weekly_Sales"] = pred
 #%%
 fig = plt.figure(figsize=(30,60))
@@ -181,7 +185,7 @@ for store in range(1,46):
     ax.plot(storeset_2010.WeekOfYear, storeset_2010.Weekly_Sales, label="2010", alpha=0.3)
     ax.plot(storeset_2011.WeekOfYear, storeset_2011.Weekly_Sales, label="2011", alpha=0.3)
     ax.plot(storeset_2012.WeekOfYear, storeset_2012.Weekly_Sales, label="2012", color='r')
-    ax.plot(test_pred_store.WeekOfYear, test_pred_store.Weekly_Sales, label="2012-pred", color='b')
+    ax.plot(test_pred_store.WeekOfYear, test_pred_store.Before_Weekly_Sales, label="2012-pred", color='b')
     ax.legend()
     
 plt.show()

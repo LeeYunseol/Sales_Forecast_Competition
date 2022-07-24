@@ -87,7 +87,7 @@ for num in range(1, 46) :
 
 transpose_scaled_time_series_df = scaled_time_series_df.transpose()
     
-km = TimeSeriesKMeans(n_clusters=2, 
+km = TimeSeriesKMeans(n_clusters=3, 
                       metric="dtw", 
                       max_iter=5,
                       random_state=2022)
@@ -99,8 +99,8 @@ for i in range(len(prediction)) :
         test.loc[(test.Store== i + 1), 'Type'] = 0
     elif prediction[i] == 1 :
         test.loc[(test.Store== i + 1), 'Type'] = 1
-    #else:
-        #test.loc[(test.Store== i + 1), 'Type'] = 2
+    else:
+        test.loc[(test.Store== i + 1), 'Type'] = 2
 #%%
 #test = test.drop(['month', 'week'], axis=1)
 test.to_csv("minmax_test_set.csv", index = False)
