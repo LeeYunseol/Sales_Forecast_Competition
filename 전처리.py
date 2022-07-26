@@ -138,28 +138,27 @@ for i in range(len(prediction)) :
     else:
         data.loc[(data.Store== i + 1), 'Type'] = 2
         data_test.loc[(data_test.Store == i+1), 'Type'] = 2
-'''
+
 #%%
 # Store one-hot encoding
-# Useless
+'''
 data = pd.get_dummies(data, columns = ['Store'])
 data_test = pd.get_dummies(data_test, columns = ['Store'])
+
+data = pd.get_dummies(data, columns = ['Type'])
+data_test = pd.get_dummies(data_test, columns = ['Type'])
 print("train data shape : {}".format(data.shape))
 print("test data shape : {}".format(data_test.shape))
 '''
-#%%
-
-
-
-
 #%%
 # Fill 0 on missing value
 data.fillna(0, inplace=True)
 data_test.fillna(0, inplace = True)
 
 #%%
-
+'''
 # Log Transform
+# Useless
 data['Weekly_Sales'] = np.log1p(data['Weekly_Sales'])
 
 
@@ -174,7 +173,7 @@ data_test['Promotion2'] = np.log1p(data_test['Promotion2'])
 data_test['Promotion3'] = np.log1p(data_test['Promotion3'])
 data_test['Promotion4'] = np.log1p(data_test['Promotion4'])
 data_test['Promotion5'] = np.log1p(data_test['Promotion5'])
-
+'''
 #%%
 data.loc[(data['Date'] == '2010-02-12')|(data['Date'] == '2011-02-11')|(data['Date'] == '2012-02-10'),'Super_Bowl'] = True
 data.loc[(data['Date'] != '2010-02-12')&(data['Date'] != '2011-02-11')&(data['Date'] != '2012-02-10'),'Super_Bowl'] = False
@@ -220,11 +219,34 @@ data_test['Christmas'] = data_test['Christmas'].astype(bool).astype(int) # chang
 data_test['IsHoliday'] = data_test['IsHoliday'].astype(bool).astype(int) # changing T,F to 0-1
 
 #%%
+# 'Temperature', 'Fuel_Price', 'Promotion1',
+           #'Promotion2','Promotion3','Promotion4', 'Unemployment', 'month', 'year','day'
+data = data.drop(['id', 'Date'], axis = 1)
+data_test = data_test.drop(['id', 'Date'], axis = 1)
+# Save subset
+data.to_csv("train_set.csv", index = False)
+data_test.to_csv("test_set.csv", index = False)
+#%% 
+# 표준화
 
-data.drop(['id', 'Date'], axis = 1, inplace = True)
-data_test.drop(['id', 'Date'], axis = 1, inplace = True)
+temp = data["Weekly_Sales"]
+scaler = MinMaxScaler()
+scaler.fit(data)
+data_scaled = scaler.transform(data)
+real_data = pd.DataFrame(data=data_scaled, columns= data.columns)
+
+data = data.drop("Weekly_Sales", axis = 1)
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+scaler.fit(data)
+data_scaled = scaler.transform(data)
+#data = pd.DataFrame(data=data_scaled, columns= data.columns)
+
+data_test_scaled = scaler.transform(data_test)
+data_test = pd.DataFrame(data=data_test_scaled, columns= data.columns)
+real_data["Original_Weekly_Sales"] = temp
 
 #%%
 # Save subset
-data.to_csv("minmax_train_set.csv", index = False)
+real_data.to_csv("minmax_train_set.csv", index = False)
 data_test.to_csv("minmax_test_set.csv", index = False)
