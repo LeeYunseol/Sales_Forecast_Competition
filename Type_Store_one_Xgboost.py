@@ -29,16 +29,30 @@ test_df = pd.read_csv('C:/Users/hyunj/.spyder-py3/Dacon/dataset/dataset/preposse
 
 original_train_df = pd.read_csv('C:/Users/hyunj/.spyder-py3/Dacon/dataset/dataset/train_set.csv')
 original_test_df = pd.read_csv('C:/Users/hyunj/.spyder-py3/Dacon/dataset/dataset/test_set.csv')
-scaler_for_weekly_sales = MinMaxScaler()
-scaler_for_weekly_sales.fit(train_df['Original_Weekly_Sales'].values.reshape(-1, 1))
 
+scaler_for_weekly_sales = MinMaxScaler()
+# scaler_for_weekly_sales.fit(train_df['Original_Weekly_Sales'].values.reshape(-1, 1))
+
+# X_train
+train_2010 = train_df[(train_df.year==2010) & (train_df.month<=9)]
+train_2011 = train_df[(train_df.year==2011) & (train_df.month<=9)]
+train_2012 = train_df[(train_df.year==2012) & (train_df.month<=8)]
+
+X_train = pd.concat([train_2010, train_2011, train_2012])
+y_train = X_train.Weekly_Sales
+
+X_train = X_train.drop(["Weekly_Sales"], axis = 1)
+
+X_test = train_df[(train_df.year==2012) & (train_df.month == 9)]
+y_test = X_test.Weekly_Sales
+X_test = X_test.drop(["Weekly_Sales"], axis = 1)
 
 # 꼭 있어야하는 정보 
 feature = list(train_df.columns)
 feature.remove('Weekly_Sales')
-feature.remove('Original_Weekly_Sales')
+# feature.remove('Original_Weekly_Sales')
 
-feature = ['Store', 'Type', 'year', 'WeekOfYear','Thanksgiving', 'month', 'day']
+#feature = ['Store', 'Type', 'year', 'WeekOfYear','Thanksgiving', 'month', 'day']
 #features = ['Store', 'Type', 'IsHoliday', 'year', 'WeekOfYear', 'month', 'day', 'Promotion1',
 #             'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5', 'Fuel_Price']
 
@@ -47,17 +61,17 @@ train = train_df
 # 그리드 서치를 통해서 성능을 높여보자!!
 parameters = {
               'objective':['reg:squarederror'],
-              'learning_rate': [0.1], #so called `eta` value
-              'max_depth': [5],
+              'learning_rate': [0.05], #so called `eta` value
+              'max_depth': [10],
               'min_child_weight': [4],
               'subsample': [0.8],
               'colsample_bytree': [0.8],
-              'n_estimators':[4500]} #540??
+              'n_estimators':[5000]} #540??
 
 fit_params={
-            "early_stopping_rounds" :15,
+            "early_stopping_rounds" :20,
             "eval_metric" : "rmse", 
-            "eval_set" : [[train[feature], train.Weekly_Sales]]}
+            "eval_set" : [[X_train[feature], y_train], [X_test[feature], y_test]]}
 
 
 xgb = XGBRegressor(random_state = 2022)
@@ -67,8 +81,8 @@ xgb_grid = GridSearchCV(xgb,
                         scoring = 'neg_mean_absolute_error',
                         n_jobs = 5,
                         verbose=3)
-
-xgb_grid.fit(train[feature], train.Weekly_Sales, **fit_params)
+#  **fit_params
+xgb_grid.fit(X_train[feature], y_train, **fit_params)
 best_model = xgb_grid.best_estimator_
 print("BEST SCORE : {}".format(xgb_grid.best_score_))
 print("BEST PARAMETER : {}".format(xgb_grid.best_params_))
@@ -83,26 +97,28 @@ model.fit(train[features], train.Weekly_Sales,
           eval_metric='rmse', 
           early_stopping_rounds=50,
           verbose = 3)
-results = model.evals_result()
+'''
+results = best_model.evals_result()
 
 epochs = len(results['validation_0']['rmse'])
 x_axis = range(0, epochs)
 # plot log loss
 fig, ax = pyplot.subplots()
 ax.plot(x_axis, results['validation_0']['rmse'], label='Train')
-#ax.plot(x_axis, results['validation_1']['rmse'], label='Test')
+ax.plot(x_axis, results['validation_1']['rmse'], label='Test')
 ax.legend()
 pyplot.ylabel('Log Loss')
 pyplot.title('XGBoost Log Loss')
 pyplot.show() 
-'''              
+    
  #%%
 # 학습 종료 후 test.csv 평가
 #pred_before = xgb_grid.best_estimator_.predict(test_df[feature])
 #pred = np.expm1(xgb_grid.best_estimator_.predict(test_df[feature]))
 # pred = model.predict(test_df[features])
-prediction = xgb_grid.best_estimator_.predict(test_df[feature])
-prediction = scaler_for_weekly_sales.inverse_transform(prediction.reshape(-1, 1))
+prediction = xgb_grid.best_estimator_.predict(X_test[feature])
+# prediction = scaler_for_weekly_sales.inverse_transform(prediction.reshape(-1, 1))
+prediction = np.expm1(prediction)
 test_df["Weekly_Sales"] = prediction
 original_test_df["Weekly_Sales"] = prediction
 #%%
@@ -111,9 +127,9 @@ fig = plt.figure(figsize=(30,60))
 plt.title(feature)
 for store in range(1,46):
     storeset = original_train_df[original_train_df.Store==store]
-    storeset_2010 = storeset[(storeset.year==2010) & (storeset.WeekOfYear<=43)]
-    storeset_2011 = storeset[(storeset.year==2011) & (storeset.WeekOfYear<=43)]
-    storeset_2012 = storeset[(storeset.year==2012) & (storeset.WeekOfYear<=43)]
+    storeset_2010 = storeset[(storeset.year==2010) & (storeset.month<=9)]
+    storeset_2011 = storeset[(storeset.year==2011) & (storeset.month<=9)]
+    storeset_2012 = storeset[(storeset.year==2012) & (storeset.month<=8)]
     
     test_pred_store = original_test_df[original_test_df.Store==store]
     
