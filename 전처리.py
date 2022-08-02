@@ -47,12 +47,46 @@ data_test['Promotion3'][data_test['Promotion3'] < 0] = 0
 data_test['Promotion4'][data_test['Promotion4'] < 0] = 0
 data_test['Promotion5'][data_test['Promotion5'] < 0] = 0
 #%%
+# There is negative value on Temperature feature
+# I thought of this negative value as an outlier. So I get rid of it.
+print("DataFrame Shape Before Remove it : {}".format(data.shape))
+index1 =  data[data.Temperature < 0].index
+data = data.drop(index1)
+data.reset_index(drop=True,inplace=True)
+print("DataFrame Shape After Remove it : {}".format(data.shape))
+# 2011-2-4 Store7 deleted
+
+#%%
 # Checking the Histogram of Target Variables
 sns.distplot(data['Weekly_Sales'], fit=stats.norm)
 # Original Target variables is imbalance, So I used Log transform
 
 sns.distplot(np.log1p(data['Weekly_Sales']), fit=stats.norm)
 # It seems balance now
+#%%
+
+# Log Transform
+# Useless
+data['Weekly_Sales'] = np.log1p(data['Weekly_Sales'])
+
+
+data['Promotion1'] = np.log1p(data['Promotion1'])
+data['Promotion2'] = np.log1p(data['Promotion2'])
+data['Promotion3'] = np.log1p(data['Promotion3'])
+data['Promotion4'] = np.log1p(data['Promotion4'])
+data['Promotion5'] = np.log1p(data['Promotion5'])
+data['Unemployment'] = np.log1p(data['Unemployment'])
+data['Temperature'] = np.log1p(data['Temperature'])
+data['Fuel_Price'] = np.log1p(data['Fuel_Price'])
+
+data_test['Promotion1'] = np.log1p(data_test['Promotion1'])
+data_test['Promotion2'] = np.log1p(data_test['Promotion2'])
+data_test['Promotion3'] = np.log1p(data_test['Promotion3'])
+data_test['Promotion4'] = np.log1p(data_test['Promotion4'])
+data_test['Promotion5'] = np.log1p(data_test['Promotion5'])
+data_test['Unemployment'] = np.log1p(data_test['Unemployment'])
+data_test['Temperature'] = np.log1p(data_test['Temperature'])
+data_test['Fuel_Price'] = np.log1p(data_test['Fuel_Price'])
 
 #%%
 # Date format is not comportable to me. So i change the format : day/month/year -> year-month-day
@@ -88,9 +122,44 @@ data_test['month'] =data_test['Date'].dt.month
 data_test['year'] =data_test['Date'].dt.year
 data_test['WeekOfYear'] = (data_test.Date.dt.isocalendar().week)*1.0 
 data_test['day'] = data_test['Date'].dt.day
-
-
 #%%
+# Fill 0 on missing value
+data.fillna(0, inplace=True)
+data_test.fillna(0, inplace = True)
+#%%
+'''
+
+# Store별 Scatter 그리기
+for store in range(1,46):
+    index = 1
+    fig = plt.figure(figsize=(20,15))
+    plt.title("Store {}".format(store))
+    
+    storeset = data[data.Store==store]
+    
+    columns = list(storeset.columns)
+
+    columns.remove('id')
+    columns.remove('Store')
+    columns.remove('Date')
+    
+    for column in columns :
+        ax = fig.add_subplot(4, 4, index)
+        sns.scatterplot(storeset[column], y = storeset.Weekly_Sales)
+        index+=1
+    plt.show()
+    
+fig = plt.figure(figsize=(20,15))
+plt.title("Store 전체")
+index =1 
+for column in columns :
+    ax = fig.add_subplot(4, 4, index)
+    sns.scatterplot(data[column], y = data.Weekly_Sales)
+    index+=1
+plt.show()
+'''
+#%%
+
 # 시계열 데이터 군집 분석
 from tslearn.clustering import TimeSeriesKMeans
 
@@ -105,9 +174,9 @@ for num in range(1, 46) :
 
 transpose_scaled_time_series_df = scaled_time_series_df.transpose()
     
-km = TimeSeriesKMeans(n_clusters=2, 
-                      metric="dtw", 
-                      max_iter=5,
+km = TimeSeriesKMeans(n_clusters=3, # 3이 최대 
+                      metric="dtw",  
+                      max_iter=10,
                       random_state=2022)
 
 prediction = km.fit_predict(transpose_scaled_time_series_df)
@@ -115,65 +184,55 @@ prediction = km.fit_predict(transpose_scaled_time_series_df)
 list_0 = []
 list_1 = []
 list_2 = []
+list_3 = []
 
 for i in range(len(prediction)) :
     if prediction[i] == 0 :
         list_0.append(i+1)
-    elif prediction[i] == 1 :
+    if prediction[i] == 1 :
         list_1.append(i+1)
-    else:
+    if prediction[i] == 2 :
         list_2.append(i+1)
+    if prediction[i] == 3 :
+        list_3.append(i+1)
 
-print("Clustering 0 : ", list_0)
-print("Clustering 1 : ", list_1)
-print("Clustering 2 : ", list_2)
+#print("Clustering 0 : ", list_0)
+#print("Clustering 1 : ", list_1)
+#print("Clustering 2 : ", list_2)
 
 for i in range(len(prediction)) :
     if prediction[i] == 0 :
         data.loc[(data.Store== i + 1), 'Type'] = 0
         data_test.loc[(data_test.Store == i+1), 'Type'] = 0
-    elif prediction[i] == 1 :
+    if prediction[i] == 1 :
         data.loc[(data.Store== i + 1), 'Type'] = 1
         data_test.loc[(data_test.Store == i+1), 'Type'] = 1
-    else:
+    if prediction[i] == 2 :
         data.loc[(data.Store== i + 1), 'Type'] = 2
         data_test.loc[(data_test.Store == i+1), 'Type'] = 2
+    if prediction[i] == 3 :
+        data.loc[(data.Store== i + 1), 'Type'] = 3
+        data_test.loc[(data_test.Store == i+1), 'Type'] = 3
+    if prediction[i] == 4 :
+        data.loc[(data.Store== i + 1), 'Type'] = 4
+        data_test.loc[(data_test.Store == i+1), 'Type'] = 4
+        if prediction[i] == 5 :
+            data.loc[(data.Store== i + 1), 'Type'] = 5
+            data_test.loc[(data_test.Store == i+1), 'Type'] = 5
 
 #%%
 # Store one-hot encoding
-'''
-data = pd.get_dummies(data, columns = ['Store'])
-data_test = pd.get_dummies(data_test, columns = ['Store'])
 
-data = pd.get_dummies(data, columns = ['Type'])
-data_test = pd.get_dummies(data_test, columns = ['Type'])
+#data = pd.get_dummies(data, columns = ['Store'])
+#data_test = pd.get_dummies(data_test, columns = ['Store'])
+
+#data = pd.get_dummies(data, columns = ['Type'])
+#data_test = pd.get_dummies(data_test, columns = ['Type'])
 print("train data shape : {}".format(data.shape))
 print("test data shape : {}".format(data_test.shape))
-'''
-#%%
-# Fill 0 on missing value
-data.fillna(0, inplace=True)
-data_test.fillna(0, inplace = True)
-
-#%%
-'''
-# Log Transform
-# Useless
-data['Weekly_Sales'] = np.log1p(data['Weekly_Sales'])
 
 
-data['Promotion1'] = np.log1p(data['Promotion1'])
-data['Promotion2'] = np.log1p(data['Promotion2'])
-data['Promotion3'] = np.log1p(data['Promotion3'])
-data['Promotion4'] = np.log1p(data['Promotion4'])
-data['Promotion5'] = np.log1p(data['Promotion5'])
 
-data_test['Promotion1'] = np.log1p(data_test['Promotion1'])
-data_test['Promotion2'] = np.log1p(data_test['Promotion2'])
-data_test['Promotion3'] = np.log1p(data_test['Promotion3'])
-data_test['Promotion4'] = np.log1p(data_test['Promotion4'])
-data_test['Promotion5'] = np.log1p(data_test['Promotion5'])
-'''
 #%%
 data.loc[(data['Date'] == '2010-02-12')|(data['Date'] == '2011-02-11')|(data['Date'] == '2012-02-10'),'Super_Bowl'] = True
 data.loc[(data['Date'] != '2010-02-12')&(data['Date'] != '2011-02-11')&(data['Date'] != '2012-02-10'),'Super_Bowl'] = False
@@ -219,13 +278,72 @@ data_test['Christmas'] = data_test['Christmas'].astype(bool).astype(int) # chang
 data_test['IsHoliday'] = data_test['IsHoliday'].astype(bool).astype(int) # changing T,F to 0-1
 
 #%%
-# 'Temperature', 'Fuel_Price', 'Promotion1',
-           #'Promotion2','Promotion3','Promotion4', 'Unemployment', 'month', 'year','day'
-data = data.drop(['id', 'Date'], axis = 1)
-data_test = data_test.drop(['id', 'Date'], axis = 1)
+data = pd.get_dummies(data, columns = ['IsHoliday'])
+data_test = pd.get_dummies(data_test, columns = ['IsHoliday'])
+
+data = pd.get_dummies(data, columns = ['Super_Bowl'])
+data_test = pd.get_dummies(data_test, columns = ['Super_Bowl'])
+#data = data.drop(["Super_Bowl", "Labor_Day"], axis=1)
+#data_test = data_test.drop(["Super_Bowl", "Labor_Day"], axis=1)
+data = pd.get_dummies(data, columns = ['Labor_Day'])
+data_test = pd.get_dummies(data_test, columns = ['Labor_Day'])
+
+data = pd.get_dummies(data, columns = ['Thanksgiving'])
+data_test = pd.get_dummies(data_test, columns = ['Thanksgiving'])
+
+
+data = pd.get_dummies(data, columns = ['Christmas'])
+data_test = pd.get_dummies(data_test, columns = ['Christmas'])
+
+#%%
+'''
+# BoxPlot
+# Train
+col_list = list(data.columns)
+col_list.remove('Date')
+col_list.remove('id')
+#col_list.remove('IsHoliday')
+for column in col_list:
+    fig = plt.figure(figsize=(20,5))
+    sns.boxplot(data[column], color='yellow')
+    fig.show()
+    
+#%%
+# BoxPlot
+# Test
+col_list = list(data_test.columns)
+col_list.remove('Date')
+col_list.remove('id')
+#col_list.remove('IsHoliday')
+for column in col_list:
+    fig = plt.figure(figsize=(20,5))
+    sns.boxplot(data_test[column], color='yellow')
+'''
+#%%
+# 'Temperature', 'Fuel_Price',                     'Promotion1',  'Promotion5', 'Fuel_Price',
+           #'Promotion2','Promotion3','Promotion4', 'Unemployment', 'WeekOfYear'
+
+#data = data.drop([ 'id', 'Date', 'Temperature',  'Fuel_Price',  'Promotion1',  'Promotion5', 'Unemployment',
+#           'Promotion2','Promotion3', 'WeekOfYear' , 'Thanksgiving', 'Christmas' , 'Promotion4', 'day'], axis = 1)
+
+#data_test = data_test.drop(['id', 'Date','Temperature', 'Fuel_Price','Promotion1',  'Promotion5', 'Unemployment',
+#           'Promotion2','Promotion3',  'WeekOfYear', 'Thanksgiving', 'Christmas', 'Promotion4', 'day'], axis = 1)
+
+
+data = data.drop([ 'id', 'Date', 'WeekOfYear' , 'Temperature', 'Fuel_Price', 'Unemployment', 'day', 
+                   'Promotion1', 'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5'], axis = 1)
+
+data_test = data_test.drop(['id', 'Date', 'WeekOfYear' , 'Temperature', 'Fuel_Price', 'Unemployment', 'day', 
+                   'Promotion1', 'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5'], axis = 1)
+
+data_test['Super_Bowl_1'] = 0
+data_test['IsHoliday_1'] = 0
+data_test['Labor_Day_1'] = 0
+data_test['Thanksgiving_1'] = 0
+data_test['Christmas_1'] = 0
 # Save subset
-data.to_csv("train_set.csv", index = False)
-data_test.to_csv("test_set.csv", index = False)
+#data.to_csv("train_set.csv", index = False)
+#data_test.to_csv("test_set.csv", index = False)
 #%% 
 # 표준화
 

@@ -12,9 +12,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 data = pd.read_csv("train.csv", encoding="utf-8")
 print(data.columns)
-#%%
-# 데이터 정보 확인
-data.info()
+
 #%%
 from matplotlib import dates
 
@@ -54,6 +52,31 @@ data['month'] =data['Date'].dt.month
 data['year'] =data['Date'].dt.year
 data['WeekOfYear'] = (data.Date.dt.isocalendar().week)*1.0 
 data['day'] = data['Date'].dt.day
+#%%
+fig = plt.figure(figsize=(30,60))
+train_df = data
+for store in range(1,46):
+    storeset = train_df[train_df.Store==store]
+    storeset_2010 = storeset[(storeset.year==2010) & (storeset.WeekOfYear<=43)]
+    storeset_2011 = storeset[(storeset.year==2011) & (storeset.WeekOfYear<=43)]
+    storeset_2012 = storeset[(storeset.year==2012) & (storeset.WeekOfYear<=43)]
+    
+    #test_pred_store = test_df[test_df.Store==store]
+    
+    # 그래프의 연속성을 위해 예측한 데이터의 전 주의 데이터도 넣어준다.
+    #test_pred_store = pd.concat([storeset_2012.iloc[-1:], test_pred_store])
+    
+    ax = fig.add_subplot(12, 4, store)
+    
+    plt.title(f"store_{store}")
+    ax.plot(storeset_2010.WeekOfYear, storeset_2010.Weekly_Sales, label="2010", alpha=0.3)
+    ax.plot(storeset_2011.WeekOfYear, storeset_2011.Weekly_Sales, label="2011", alpha=0.3)
+    ax.plot(storeset_2012.WeekOfYear, storeset_2012.Weekly_Sales, label="2012", color='r')
+    #ax.plot(test_pred_store.WeekOfYear, test_pred_store.Before_Weekly_Sales, label="2012-pred", color='b')
+    ax.legend()
+    
+plt.show()
+
 #%%
 '''
 # 각 Store에 대한 Weekly Sales를 시계열 그래프라고 생각하고 각 Store에 대한 Weekly Sales의 코사인 유사도를 구한 뒤에 Store끼리의 유사성을 파악
@@ -193,7 +216,7 @@ data.loc[(data['Date'] == '2010-12-31')|(data['Date'] == '2011-12-30'),'Christma
 data.loc[(data['Date'] != '2010-12-31')&(data['Date'] != '2011-12-30'),'Christmas'] = False
 
 
-sns.barplot(x='Super_Bowl', y='Weekly_Sales', data=data) # Super bowl holiday vs not-super bowl
+sns.barplot(x='IsHoliday', y='Weekly_Sales', data=data) # Super bowl holiday vs not-super bowl
 #%%
 sns.barplot(x='Labor_Day', y='Weekly_Sales', data=data) # Labor day holiday vs not-labor day
 #%%
