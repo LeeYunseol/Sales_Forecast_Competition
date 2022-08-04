@@ -69,7 +69,7 @@ sns.distplot(np.log1p(data['Weekly_Sales']), fit=stats.norm)
 # Useless
 data['Weekly_Sales'] = np.log1p(data['Weekly_Sales'])
 
-
+'''
 data['Promotion1'] = np.log1p(data['Promotion1'])
 data['Promotion2'] = np.log1p(data['Promotion2'])
 data['Promotion3'] = np.log1p(data['Promotion3'])
@@ -87,7 +87,7 @@ data_test['Promotion5'] = np.log1p(data_test['Promotion5'])
 data_test['Unemployment'] = np.log1p(data_test['Unemployment'])
 data_test['Temperature'] = np.log1p(data_test['Temperature'])
 data_test['Fuel_Price'] = np.log1p(data_test['Fuel_Price'])
-
+'''
 #%%
 # Date format is not comportable to me. So i change the format : day/month/year -> year-month-day
 date_df = data.loc[:, ['Date']]
@@ -226,8 +226,15 @@ for i in range(len(prediction)) :
 #data = pd.get_dummies(data, columns = ['Store'])
 #data_test = pd.get_dummies(data_test, columns = ['Store'])
 
+#data = pd.get_dummies(data, columns = ['month'])
+#data_test = pd.get_dummies(data_test, columns = ['month'])
+
 #data = pd.get_dummies(data, columns = ['Type'])
 #data_test = pd.get_dummies(data_test, columns = ['Type'])
+
+#data = pd.get_dummies(data, columns = ['year'])
+#data_test = pd.get_dummies(data_test, columns = ['year'])
+
 print("train data shape : {}".format(data.shape))
 print("test data shape : {}".format(data_test.shape))
 
@@ -278,22 +285,23 @@ data_test['Christmas'] = data_test['Christmas'].astype(bool).astype(int) # chang
 data_test['IsHoliday'] = data_test['IsHoliday'].astype(bool).astype(int) # changing T,F to 0-1
 
 #%%
-data = pd.get_dummies(data, columns = ['IsHoliday'])
-data_test = pd.get_dummies(data_test, columns = ['IsHoliday'])
 
-data = pd.get_dummies(data, columns = ['Super_Bowl'])
-data_test = pd.get_dummies(data_test, columns = ['Super_Bowl'])
+#data = pd.get_dummies(data, columns = ['IsHoliday'])
+#data_test = pd.get_dummies(data_test, columns = ['IsHoliday'])
+
+#data = pd.get_dummies(data, columns = ['Super_Bowl'])
+#data_test = pd.get_dummies(data_test, columns = ['Super_Bowl'])
 #data = data.drop(["Super_Bowl", "Labor_Day"], axis=1)
 #data_test = data_test.drop(["Super_Bowl", "Labor_Day"], axis=1)
-data = pd.get_dummies(data, columns = ['Labor_Day'])
-data_test = pd.get_dummies(data_test, columns = ['Labor_Day'])
+#data = pd.get_dummies(data, columns = ['Labor_Day'])
+#data_test = pd.get_dummies(data_test, columns = ['Labor_Day'])
 
-data = pd.get_dummies(data, columns = ['Thanksgiving'])
-data_test = pd.get_dummies(data_test, columns = ['Thanksgiving'])
+#data = pd.get_dummies(data, columns = ['Thanksgiving'])
+#data_test = pd.get_dummies(data_test, columns = ['Thanksgiving'])
 
 
-data = pd.get_dummies(data, columns = ['Christmas'])
-data_test = pd.get_dummies(data_test, columns = ['Christmas'])
+#data = pd.get_dummies(data, columns = ['Christmas'])
+#data_test = pd.get_dummies(data_test, columns = ['Christmas'])
 
 #%%
 '''
@@ -330,17 +338,36 @@ for column in col_list:
 #           'Promotion2','Promotion3',  'WeekOfYear', 'Thanksgiving', 'Christmas', 'Promotion4', 'day'], axis = 1)
 
 
-data = data.drop([ 'id', 'Date', 'WeekOfYear' , 'Temperature', 'Fuel_Price', 'Unemployment', 'day', 
+data = data.drop([ 'id', 'Date', 'WeekOfYear' , 'Temperature', 'Fuel_Price', 'Unemployment', 'Super_Bowl', 'Christmas' ,
                    'Promotion1', 'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5'], axis = 1)
 
-data_test = data_test.drop(['id', 'Date', 'WeekOfYear' , 'Temperature', 'Fuel_Price', 'Unemployment', 'day', 
+data_test = data_test.drop(['id', 'Date', 'WeekOfYear' , 'Temperature', 'Fuel_Price', 'Unemployment', 'Super_Bowl', 'Christmas' ,
                    'Promotion1', 'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5'], axis = 1)
 
+#data = data.drop([ 'id', 'Date', 'WeekOfYear' ], axis = 1)
+
+#data_test = data_test.drop(['id', 'Date', 'WeekOfYear'], axis = 1)
+'''
 data_test['Super_Bowl_1'] = 0
 data_test['IsHoliday_1'] = 0
 data_test['Labor_Day_1'] = 0
 data_test['Thanksgiving_1'] = 0
 data_test['Christmas_1'] = 0
+
+data_test['month_1'] = 0
+data_test['month_2'] = 0
+data_test['month_3'] = 0
+data_test['month_4'] = 0
+data_test['month_5'] = 0
+data_test['month_6'] = 0
+data_test['month_7'] = 0
+data_test['month_8'] = 0
+data_test['month_9'] = 0
+data_test['month_11'] = 0
+data_test['month_12'] = 0
+data_test['year_2010'] = 0
+data_test['year_2011'] = 0
+'''
 # Save subset
 #data.to_csv("train_set.csv", index = False)
 #data_test.to_csv("test_set.csv", index = False)

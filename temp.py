@@ -37,38 +37,29 @@ scaler_for_weekly_sales.fit(train_df['Original_Weekly_Sales'].values.reshape(-1,
 X_train = train_df[train_df.month <= 0.85]
 y_train = X_train.Weekly_Sales
 
+X_train = X_train.drop(["Weekly_Sales", "Original_Weekly_Sales"], axis = 1)
 
 # 꼭 있어야하는 정보 
 #X_train = train_df
 #y_train = train_df.Weekly_Sales
-feature = ['Store', 'Type', 'year', 'week','IsHoliday', 'month', 'day']
+feature = list(train_df.columns)
+feature.remove('Weekly_Sales')
+feature.remove('Original_Weekly_Sales')
+feature.remove('month')
 
-#feature = ['Store', 'Type', 'year', 'WeekOfYear','Thanksgiving', 'month', 'day']
-#features = ['Store', 'Type', 'IsHoliday', 'year', 'WeekOfYear', 'month', 'day', 'Promotion1',
-#             'Promotion2', 'Promotion3', 'Promotion4', 'Promotion5', 'Fuel_Price']
 
-#train = train_df
-
-# 그리드 서치를 통해서 성능을 높여보자!!
 parameters = {
               'objective':['reg:squarederror'],
-              'learning_rate':[0.2], #so called `eta` value
-              'max_depth': [40],
+              'learning_rate': [0.1], #so called `eta` value
+              'max_depth': [20],
               'min_child_weight': [4],
               'subsample': [0.8],
               'colsample_bytree': [0.8],
-              'n_estimators':[30000]
-              } #540??
-'''
-fit_params={
-            "early_stopping_rounds" :50,
-            "eval_metric" : "rmse", 
-            "eval_set" : [[X_test[feature], y_test]]
-            }
-'''
+              'n_estimators':[10000]
+              } 
+
 
 xgb = XGBRegressor(random_state = 2022)
-#xgb.set_params(**fit_params)
 xgb_grid = GridSearchCV(xgb,
                         parameters,
                         cv = 10,
@@ -77,7 +68,7 @@ xgb_grid = GridSearchCV(xgb,
                         verbose=3
                         )
 #  **fit_params
-xgb_grid.fit(X_train[feature], y_train)#, eval_set = [[X_test[feature], y_test]])#, **fit_params)
+xgb_grid.fit(X_train[feature], y_train)
 best_model = xgb_grid.best_estimator_
 
 
@@ -85,76 +76,9 @@ print("BEST SCORE : {}".format(xgb_grid.best_score_))
 print("BEST PARAMETER : {}".format(xgb_grid.best_params_))
 
 
-'''
-model = XGBRegressor(colsample_bytree=0.8, max_depth= 5, learning_rate= 0.25, n_estimators=500,
-                   random_state =2022, nthread = -1, n_jobs=-1)
-
-model.fit(train[features], train.Weekly_Sales,
-          eval_set=[(train[features], train.Weekly_Sales)],
-          eval_metric='rmse', 
-          early_stopping_rounds=50,
-          verbose = 3)
-
-results = best_model.evals_result()
-
-epochs = len(results['validation_0']['rmse'])
-x_axis = range(0, epochs)
-# plot log loss
-fig, ax = pyplot.subplots()
-ax.plot(x_axis, results['validation_0']['rmse'], label='TEST')
-#ax.plot(x_axis, results['validation_1']['rmse'], label='Test')
-ax.legend()
-pyplot.ylabel('Log Loss')
-pyplot.title('XGBoost Log Loss')
-pyplot.show() 
-'''
 #%%
-'''
-pred = best_model.predict(X_test[feature])
-x = np.sqrt(metrics.mean_squared_error(y_test, pred))
-print("전체")
-print("RMSE: ", x) #RMSE
-score = r2_score(y_test, pred)
-print("R^2 : {}\n".format(score))
-
-
-# 각 Store의 점수 보기 
-for i in range(45) :
-    print("Store {}".format(i+1))
-    y_test = X_test_temp.iloc[i*4 : i*4+4, :].Weekly_Sales
-    temp = X_test_temp.iloc[i*4:i*4+4, :][feature]
-    y_pred = best_model.predict(temp)
-    x = np.sqrt(metrics.mean_squared_error(y_test, y_pred))
-    print("RMSE : ", x) #RMSE
-    score = r2_score(y_test, y_pred)
-    print("R^2 : {}\n".format(score))
-'''
-#%%
-# 테스트 후 전체 셋에 대해서 학습
-'''
-X_train = train_df[train_df.month <= 0.85]
-y_train = X_train.Weekly_Sales
-
-#eval_set = [(X_train[feature], X_train.Weekly_Sales)]
-#best_model =  xgb_grid.best_estimator_ 
-real_best_model = XGBRegressor(random_state = 2022)
-real_best_model.set_params(**xgb_grid.best_params_)
-#new_params = {"n_estimators":800}
-real_best_model.set_params(**new_params)
-print(real_best_model)  
-real_best_model.fit(X_train[feature], X_train.Weekly_Sales)#,
-               #eval_set=eval_set,
-               #eval_metric='rmse', 
-               #early_stopping_rounds=20,
-               #verbose = 3
-               #)
-'''
-               
- #%%
 # 학습 종료 후 test.csv 평가
-#pred_before = xgb_grid.best_estimator_.predict(test_df[feature])
-#pred = np.expm1(xgb_grid.best_estimator_.predict(test_df[feature]))
-# pred = model.predict(test_df[features])
+
 prediction = best_model.predict(test_df[feature])
 prediction = scaler_for_weekly_sales.inverse_transform(prediction.reshape(-1, 1))
 prediction = np.expm1(prediction)
