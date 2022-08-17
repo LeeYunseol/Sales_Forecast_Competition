@@ -14,4 +14,8 @@ The public score is 12th, but the private score is 1st.
 Here is my explanation of my code, but written by Korean : 
 https://dacon.io/competitions/official/235942/codeshare/5954
 
+
+
+Certificate of Achievement : 
+
 ![Certificate of Achievement](./achievement.png)
